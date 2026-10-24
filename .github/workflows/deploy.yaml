@@ -31,8 +31,30 @@ jobs:
           username: ubuntu
           key: ${{ secrets.SSH_KEY }}
           script: |
-            cd ~/Backend
-            git pull origin main
-            sudo docker compose down
+            set -e  # Exit on any error
+
+            echo "=== Checking Backend directory ==="
+            if [ -d ~/Backend ]; then
+              cd ~/Backend
+              echo "Directory exists, pulling latest changes"
+              git pull origin main || echo "Git pull failed"
+            else
+              echo "Directory does not exist, cloning repository"
+              cd ~
+              git clone https://github.com/moinuddinquazi11-ux/Backend.git
+              cd Backend
+            fi
+
+            echo "=== Checking Docker ==="
+            sudo docker --version
+            sudo docker compose version
+
+            echo "=== Stopping existing containers ==="
+            sudo docker compose down || echo "No containers to stop"
+
+            echo "=== Building and starting containers ==="
             sudo docker compose up -d --build
+
+            echo "=== Checking container status ==="
             sudo docker compose ps
+            sudo docker compose logs
