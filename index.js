@@ -10,7 +10,7 @@ app.use(express.json())
 
 app.get("/", (req, res) => {
     res.json({
-        message: "Welcome to the API",
+        message: "Welcome to the API With CI/CD",
         version: "1.0.0"
     })
 })
