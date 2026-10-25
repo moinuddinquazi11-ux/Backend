@@ -1,24 +1,57 @@
-name: deploy to ec2
+name: Deploy to EC2
+
 on:
-   push:
-     branches:
-        - main
+  push:
+    branches:
+      - main
 
 jobs:
-   deploy:
-      runs-on: Ubuntu 24.04.5
+  deploy:
+    runs-on: ubuntu-24.04
 
-      steps:
-       - name: checkout code
-         uses: actions/checkout@v6
-       - name: deploy via ssh
-         uses: appleboy/ssh-action@v1
-         with:
-           host: ${{secrets.SSH_HOST}}
-           username: ubuntu
-           key: ${{secrets.SSH_KEY}}
-           script: |
-             cd ~/Backend
-             git pull
-             sudo docker compose down
-             sudo docker compose up -d --build
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v6
+
+      - name: deploy via ssh
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+
+            echo "=== Checking Backend directory ==="
+            if [ -d ~/Backend ]; then
+              cd ~/Backend
+              echo "Directory exists, pulling latest changes"
+              git pull origin main
+            else
+              echo "Directory does not exist, cloning repository"
+              cd ~
+              git clone https://github.com/moinuddinquazi11-ux/Backend.git
+              cd Backend
+            fi
+
+            echo "=== Creating .env file ==="
+            cat > .env << EOF
+            PORT=8000
+            MONGO_URI=mongodb+srv://moinuddinquazi11_db_user:36N6xOwS8VvFhZ3g@dbcluster.lt8gbj1.mongodb.net/DBCluster
+            JWT_SECRET_KEY=your_jwt_secret_key_here
+            REDIS_URL=redis://redis:6379
+            EOF
+
+            echo "=== Checking Docker ==="
+            sudo docker --version
+            sudo docker compose version
+
+            echo "=== Stopping existing containers ==="
+            sudo docker compose down || echo "No containers to stop"
+
+            echo "=== Building and starting containers ==="
+            sudo docker compose up -d --build
+
+            echo "=== Checking container status ==="
+            sudo docker compose ps
+            sudo docker compose logs
